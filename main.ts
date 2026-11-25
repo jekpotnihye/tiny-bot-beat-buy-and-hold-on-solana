@@ -9,9 +9,8 @@
 //   - Enter when the fast SMA crosses above the slow SMA and the trailing
 //     momentum window is up (the close is above the close MOM bars back).
 //   - Exit the whole position when the fast SMA crosses back below the
-//     slow SMA, when the close falls back below the fast SMA (a fast
-//     trailing exit), when the position has fallen STOP below its cost,
-//     or when it has risen ROI above its cost (take profit).
+//     slow SMA, when the position has fallen STOP below its cost, or when
+//     it has risen ROI above its cost (take profit).
 //   - Stake: equity split over SLOTS slots, capped by the harness weight
 //     cap (25% of equity per symbol) and by the cash left in this reply.
 //   - Sells go first in each reply, then buys, in universe order, at most
@@ -35,7 +34,6 @@ const MAX_SLIPPAGE_BPS = 100;
 interface Series {
   closes: number[];
   prevGap: number | null;
-  fast: number | null;
 }
 
 const series = new Map<string, Series>();
@@ -54,13 +52,12 @@ await runBars({
     for (const bar of batch.bars) {
       let s = series.get(bar.symbol);
       if (s === undefined) {
-        s = { closes: [], prevGap: null, fast: null };
+        s = { closes: [], prevGap: null };
         series.set(bar.symbol, s);
       }
       s.closes.push(Number(bar.c));
       const fast = sma(s.closes, FAST_BARS);
       const slow = sma(s.closes, SLOW_BARS);
-      s.fast = fast;
       if (fast === null || slow === null) continue;
       const gap = fast - slow;
       if (s.prevGap !== null) {
@@ -82,9 +79,7 @@ await runBars({
         const value = state.value(symbol, held.qty);
         const stopped = value * STOP_DEN <= held.cost * STOP_NUM;
         const taken = value * ROI_DEN >= held.cost * ROI_NUM;
-        const lastClose = s.closes[s.closes.length - 1];
-        const belowFast = s.fast !== null && lastClose < s.fast;
-        if (crossDown.has(symbol) || stopped || taken || belowFast) {
+        if (crossDown.has(symbol) || stopped || taken) {
           sells.push({ side: 'sell', symbol, qty: held.qty, max_slippage_bps: MAX_SLIPPAGE_BPS });
         }
       } else if (crossUp.has(symbol)) {
