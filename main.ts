@@ -45,6 +45,19 @@ function sma(values: number[], span: number): number | null {
   return sum / span;
 }
 
+// True when the trailing momentum window is up: the latest close sits
+// above the close MOM_BARS back.
+function hasMomentum(closes: number[]): boolean {
+  const back = closes[closes.length - 1 - MOM_BARS];
+  const now = closes[closes.length - 1];
+  return back !== undefined && now > back;
+}
+function shouldExit(crossedDown: boolean, value: bigint, cost: bigint): boolean {
+  const stopped = value * STOP_DEN <= cost * STOP_NUM;
+  const taken = value * ROI_DEN >= cost * ROI_NUM;
+  return crossedDown || stopped || taken;
+}
+
 await runBars({
   onBatch(state: BarsState, batch) {
     const crossUp = new Set<string>();
@@ -77,15 +90,11 @@ await runBars({
       const held = state.positions.get(symbol);
       if (held !== undefined) {
         const value = state.value(symbol, held.qty);
-        const stopped = value * STOP_DEN <= held.cost * STOP_NUM;
-        const taken = value * ROI_DEN >= held.cost * ROI_NUM;
-        if (crossDown.has(symbol) || stopped || taken) {
+        if (shouldExit(crossDown.has(symbol), value, held.cost)) {
           sells.push({ side: 'sell', symbol, qty: held.qty, max_slippage_bps: MAX_SLIPPAGE_BPS });
         }
       } else if (crossUp.has(symbol)) {
-        const back = s.closes[s.closes.length - 1 - MOM_BARS];
-        const now = s.closes[s.closes.length - 1];
-        if (back !== undefined && now > back) entries.push(symbol);
+        if (hasMomentum(s.closes)) entries.push(symbol);
       }
     }
 
