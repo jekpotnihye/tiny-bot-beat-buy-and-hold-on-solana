@@ -21,14 +21,14 @@
 
 import { BPS, runBars, type BarsState, type BuyInput, type SellInput } from './vendor/makefun-bars.ts';
 
-const FAST_BARS = 6;
-const SLOW_BARS = 24;
-const MOM_BARS = 12;
-const STOP_NUM = 92n;
+const FAST_BARS = 4;
+const SLOW_BARS = 16;
+const MOM_BARS = 8;
+const STOP_NUM = 94n;
 const STOP_DEN = 100n;
-const ROI_NUM = 120n;
+const ROI_NUM = 112n;
 const ROI_DEN = 100n;
-const SLOTS = 4;
+const SLOTS = 3;
 const MAX_SLIPPAGE_BPS = 100;
 
 interface Series {
